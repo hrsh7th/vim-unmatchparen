@@ -16,8 +16,22 @@ Settings for pop out open paren if unmatched.
 ### g:unmatchparen#disable_filetypes (default: [])
 Settings for disable specific filetypes.
 
+### g:unmatchparen#is_open_paren_check (default: 1)
+Settings for check open paren.
+
+### g:unmatchparen#pairs_for_filetype (default: { 'vim': { ... } })
+Settings for pairs for specific filetype.
+
+```VimL
+let g:unmatchparen#pairs_for_filetype = {
+  \   'vim': {
+  \     'if': 'endif',
+  \     'for': 'endfor'
+  \   }
+  \ }
+```
+
 ### g:unmatchparen#debug (default: 0)
-Settings for debugging.
 
 # demo
 

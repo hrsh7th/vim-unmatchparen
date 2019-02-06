@@ -3,13 +3,22 @@ let g:unmatchparen#highlight_priority = get(g:, 'unmatchparen#highlight_priority
 let g:unmatchparen#debug = get(g:, 'unmatchparen#debug', 0)
 let g:unmatchparen#disable_filetypes = get(g:, 'unmatchparen#disable_filetypes', [])
 let g:unmatchparen#skip_open_paren_if_unmatch = get(g:, 'unmatchparen#skip_open_paren_if_unmatch', 1)
+let g:unmatchparen#is_open_paren_check = get(g:, 'unmatchparen#is_open_paren_check', 1)
+let g:unmatchparen#pairs_for_filetype = get(g:, 'g:unmatchparen#pairs_for_filetype', {
+      \   'vim': {
+      \     'if': 'endif',
+      \     'for': 'endfor',
+      \     'function': 'endfunction',
+      \     'while': 'endwhile'
+      \   }
+      \ })
 
 let s:pairs = {}
 let s:opens = []
 let s:closes = []
 let s:all_pattern = ''
 
-function! unmatchparen#highlight(unmatches) abort
+function! unmatchparen#highlight(unmatches)
   if has_key(b:, 'unmatchparen_current_highlights')
     silent! call matchdelete(b:unmatchparen_current_highlights)
   endif
@@ -20,10 +29,15 @@ function! unmatchparen#highlight(unmatches) abort
         \ g:unmatchparen#highlight_priority)
 endfunction
 
-function! unmatchparen#update() abort
+function! unmatchparen#update()
   " ignore if matched disable filetypes.
   if index(g:unmatchparen#disable_filetypes, &filetype) > 0
     return
+  endif
+
+  if g:unmatchparen#debug
+    echomsg " "
+    echomsg 'start traverse...'
   endif
 
   " create target texts.
@@ -59,8 +73,20 @@ function! unmatchparen#update() abort
       continue
     endif
 
+    " ignore comments or strings.
+    let s:synName = synIDattr(synIDtrans(synID(s:start + s:count_linebreak + 1, s:match[1] - s:scan_linebreak + 1, 0)), 'name')
+    if g:unmatchparen#debug
+      echomsg 's:synId: ' . s:synName
+    endif
+    if index(['Comment', 'String'], s:synName) >= 0
+      continue
+    endif
+
     " if open paren match.
     if index(s:opens, s:match[0]) != -1
+      if g:unmatchparen#debug
+        echomsg 'push: ' . s:match[0]
+      endif
       call s:stack.push({
             \ 'line': s:start + s:count_linebreak + 1,
             \ 'col': s:match[1] - s:scan_linebreak + 1,
@@ -75,6 +101,9 @@ function! unmatchparen#update() abort
       " collect paren.
       if s:stack.length() > 0
         if s:pairs[s:match[0]] == s:stack.peek()['paren']
+          if g:unmatchparen#debug
+            echomsg 'pop: ' . s:match[0]
+          endif
           call s:stack.pop()
           continue
         endif
@@ -89,34 +118,46 @@ function! unmatchparen#update() abort
             \ })
 
       " maybe invalid open paren.
-      if g:unmatchparen#skip_open_paren_if_unmatch
-        call add(s:unmatches, s:stack.pop())
-      else
-        call add(s:unmatches, s:stack.peek())
+      if g:unmatchparen#is_open_paren_check
+        if g:unmatchparen#skip_open_paren_if_unmatch
+          call add(s:unmatches, s:stack.pop())
+        else
+          call add(s:unmatches, s:stack.peek())
+        endif
       endif
       continue
     endif
   endwhile
 
-  if g:unmatchparen#debug == 1
+  if g:unmatchparen#debug
     echomsg json_encode(s:unmatches)
   endif
 
   call unmatchparen#highlight(s:unmatches)
 endfunction
 
-function! unmatchparen#setup() abort
+function! unmatchparen#setup()
   for [open, closed] in map(split(&l:matchpairs, ','), 'split(v:val, ":")')
     let s:pairs[closed] = open
   endfor
 
-  if g:unmatchparen#debug == 1
-    echomsg json_encode(s:pairs)
+  if exists('g:unmatchparen#pairs_for_filetype["' . &filetype . '"]')
+    for [open, closed] in items(g:unmatchparen#pairs_for_filetype[&filetype])
+      let s:pairs[closed] = open
+    endfor
   endif
 
   let s:opens = values(s:pairs)
   let s:closes = keys(s:pairs)
-  let s:all_pattern = join(map((s:opens + s:closes), 'escape(v:val, "[]")'), '\|')
+  let s:all_pattern = join(map((s:opens + s:closes), '"\\<" . escape(v:val, "[]"). "\\>"'), '\|')
+
+  if g:unmatchparen#debug
+    echomsg ' '
+    echomsg 'setup...'
+    echomsg 's:all_pattern: ' . s:all_pattern
+    echomsg 's:pairs: ' . json_encode(s:pairs)
+  endif
+
   highlight link ParenUnMatch Error
 endfunction
 
