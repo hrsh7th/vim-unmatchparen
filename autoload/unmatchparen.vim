@@ -1,5 +1,6 @@
 let g:unmatchparen#buffer_offset = get(g:, 'unmatchparen#buffer_offset', 50)
 let g:unmatchparen#highlight_priority = get(g:, 'unmatchparen#highlight_priority', 50)
+let g:unmatchparen#debug = get(g:, 'unmatchparen#debug', 0)
 
 let s:pairs = {}
 let s:opens = []
@@ -75,7 +76,9 @@ function! unmatchparen#update() abort
     endif
   endwhile
 
-  echomsg json_encode(s:unmatches)
+  if g:unmatchparen#debug == 1
+    echomsg json_encode(s:unmatches)
+  endif
 
   call unmatchparen#highlight(s:unmatches)
 endfunction

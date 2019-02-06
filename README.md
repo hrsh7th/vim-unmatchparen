@@ -8,6 +8,8 @@ highlights unmatched paren.
 
 - g:unmatchparen#highlight_priority(10)
 
+- g:unmatchparen#debug(0)
+
 # note
 
 implementation is heavyly inspired by itchny/vim-parenmatch. thanks.
