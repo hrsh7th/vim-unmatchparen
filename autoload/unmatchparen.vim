@@ -20,10 +20,6 @@ function! unmatchparen#highlight(unmatches)
   if has_key(b:, 'unmatchparen_current_highlights')
     silent! call matchdelete(b:unmatchparen_current_highlights)
   endif
-  let s:start = line('w0')
-  let s:end = line('w$')
-  let s:unmatches = filter(s:unmatches, "s:start <= v:val['line'] && v:val['line'] <= s:end")
-
   let b:unmatchparen_current_highlights = matchaddpos(
         \ 'ParenUnMatch',
         \ map(a:unmatches, "[v:val['line'], v:val['col'], v:val['len']]"),

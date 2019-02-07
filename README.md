@@ -14,7 +14,7 @@ Settings for toggle syntax detection.
 ### g:unmatchparen#ignore_syntaxes (default: ['Comment', 'String'])
 Settings for detect syntaxes.
 
-### g:unmatchparen#highlight_priority (default: 10)
+### g:unmatchparen#highlight_priority (default: 100)
 Settings for highlight priority. `help matchaddpos`
 
 ### g:unmatchparen#disable_filetypes (default: [])
