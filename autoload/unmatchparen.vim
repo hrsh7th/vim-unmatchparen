@@ -1,9 +1,7 @@
-let g:unmatchparen#stopline = get(g:, 'unmatchparen#stopline', 100)
+let g:unmatchparen#is_syntax_detection_enabled = get(g:, 'unmatchparen#is_syntax_detection_enabled', 1)
+let g:unmatchparen#ignore_syntaxes = get(g:, 'unmatchparen#ignore_syntaxes', ['Comment', 'String'])
 let g:unmatchparen#highlight_priority = get(g:, 'unmatchparen#highlight_priority', 100)
-let g:unmatchparen#debug = get(g:, 'unmatchparen#debug', 0)
 let g:unmatchparen#disable_filetypes = get(g:, 'unmatchparen#disable_filetypes', [])
-let g:unmatchparen#skip_open_paren_if_unmatch = get(g:, 'unmatchparen#skip_open_paren_if_unmatch', 1)
-let g:unmatchparen#is_open_paren_check = get(g:, 'unmatchparen#is_open_paren_check', 1)
 let g:unmatchparen#pairs_for_filetype = get(g:, 'g:unmatchparen#pairs_for_filetype', {
       \   'vim': {
       \     'if': 'endif',
@@ -39,11 +37,9 @@ function! unmatchparen#update()
     return
   endif
 
-  call unmatchparen#log('start traverse', '...')
-
   " create target texts.
-  let s:start = max([line('.') - g:unmatchparen#stopline, 1])
-  let s:end = min([line('.') + g:unmatchparen#stopline, line('$')])
+  let s:start = line('w0')
+  let s:end = line('w$')
   let s:lines = getbufline(bufnr('%'), s:start, s:end)
   let s:texts = type(s:lines) == v:t_list ? join(s:lines, "\n") : s:lines
 
@@ -59,71 +55,74 @@ function! unmatchparen#update()
     if s:match[0] == ''
       break
     endif
-    let s:scan = s:match[2]
+    let s:match_string = s:match[0]
+    let s:match_start = s:match[1]
+    let s:match_end = s:match[2]
+    let s:scan = s:match_end
 
     " if \n match.
-    if s:match[0] == "\n"
+    if s:match_string == "\n"
       let s:count_linebreak = s:count_linebreak + 1
       let s:scan_linebreak = s:scan
       continue
     endif
 
-    call unmatchparen#log('s:match[0]', s:match[0])
-
     " ignore comments or strings.
-    let s:synID = synID(s:start + s:count_linebreak, s:match[1] - s:scan_linebreak + 1, 0)
-    let s:synIDtrans = synIDtrans(s:synID)
-    let s:synName = synIDattr(s:synIDtrans, 'name')
-    if strlen(s:synName) && index(['Comment', 'String'], s:synName) >= 0
-      continue
+    if g:unmatchparen#is_syntax_detection_enabled
+      let s:synID = synID(s:start + s:count_linebreak, s:match_start - s:scan_linebreak + 1, 0)
+      let s:synIDtrans = synIDtrans(s:synID)
+      let s:synName = synIDattr(s:synIDtrans, 'name')
+      if strlen(s:synName) && index(g:unmatchparen#ignore_syntaxes, s:synName) >= 0
+        continue
+      endif
     endif
 
     " if open paren match.
-    if index(s:opens, s:match[0]) != -1
-      call unmatchparen#log('push', s:match[0])
+    if index(s:opens, s:match_string) != -1
       call s:stack.push({
             \ 'line': s:start + s:count_linebreak,
-            \ 'col': s:match[1] - s:scan_linebreak + 1,
-            \ 'len': len(s:match[0]),
-            \ 'paren': s:match[0]
+            \ 'col': s:match_start - s:scan_linebreak + 1,
+            \ 'len': len(s:match_string),
+            \ 'paren': s:match_string
             \ })
       continue
     endif
 
     " if close paren match.
-    if index(s:closes, s:match[0]) != -1
-      " collect paren.
-      if s:stack.length() > 0
-        if s:pairs[s:match[0]] == s:stack.peek()['paren']
-          call unmatchparen#log('pop', s:match[0])
-          call s:stack.pop()
-          continue
-        endif
+    if index(s:closes, s:match_string) != -1
+      " match paren.
+      if s:pairs[s:match_string] == s:stack.peek('paren')
+        call s:stack.pop()
+        continue
       endif
 
-      " invalid paren.
-      call add(s:unmatches, {
-            \ 'line': s:start + s:count_linebreak,
-            \ 'col': s:match[1] - s:scan_linebreak + 1,
-            \ 'len': len(s:match[0]),
-            \ 'paren': s:match[0]
-            \ })
+      " experimental: maybe invalid paren at top of stack if matche when skip peek item.
+      if s:pairs[s:match_string] == s:stack.peek_at(1, 'paren')
+        call add(s:unmatches, {
+              \ 'line': s:start + s:count_linebreak,
+              \ 'col': s:match_start - s:scan_linebreak + 1,
+              \ 'len': len(s:match_string),
+              \ 'paren': s:match_string
+              \ })
+        call add(s:unmatches, s:stack.pop())
+        call s:stack.pop()
+        continue
+      endif
 
-      " maybe invalid open paren.
-      if s:stack.length() > 0
-        if g:unmatchparen#is_open_paren_check
-          if g:unmatchparen#skip_open_paren_if_unmatch
-            call add(s:unmatches, s:stack.pop())
-          else
-            call add(s:unmatches, s:stack.peek())
-          endif
-        endif
+      " maybe invalid paren.
+      if s:stack.length() != 0
+        call add(s:unmatches, {
+              \ 'line': s:start + s:count_linebreak,
+              \ 'col': s:match_start - s:scan_linebreak + 1,
+              \ 'len': len(s:match_string),
+              \ 'paren': s:match_string
+              \ })
+        call add(s:unmatches, s:stack.pop())
       endif
       continue
     endif
   endwhile
 
-  if len(s:unmatches) | call unmatchparen#log('s:unmatches', s:unmatches) | endif
   call unmatchparen#highlight(s:unmatches)
 endfunction
 
@@ -148,17 +147,7 @@ function! unmatchparen#setup()
   let s:closes = keys(s:pairs)
   let s:pattern = join(map((s:opens + s:closes), { i, v -> strlen(v) == 1 ? escape(v, '[]') : '\<' . v . '\>' }), '\|')
 
-  call unmatchparen#log('setup', '...')
-  call unmatchparen#log('s:pattern', s:pattern)
-  call unmatchparen#log('s:pairs', s:pairs)
-
   highlight link ParenUnMatch Error
-endfunction
-
-function! unmatchparen#log(name, txt)
-  if g:unmatchparen#debug
-    echomsg printf('%s: %s', a:name, json_encode(a:txt))
-  endif
 endfunction
 
 let s:Stack = { 'list': [] }
@@ -181,9 +170,24 @@ function! s:Stack.pop()
   endif
 endfunction
 
-function! s:Stack.peek()
+function! s:Stack.peek(...)
   if len(self.list) > 0
+    let s:prop = len(a:000) >= 1 ? a:000[0] : v:null
+    if s:prop != v:null
+      return self.list[len(self.list) - 1][s:prop]
+    endif
     return self.list[len(self.list) - 1]
+  endif
+endfunction
+
+function! s:Stack.peek_at(offset, ...)
+  let s:idx = len(self.list) - a:offset - 1
+  if len(self.list) > s:idx
+    let s:prop = len(a:000) >= 1 ? a:000[0] : v:null
+    if s:prop != v:null
+      return self.list[s:idx][s:prop]
+    endif
+    return self.list[s:idx]
   endif
 endfunction
 

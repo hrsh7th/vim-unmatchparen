@@ -2,22 +2,23 @@
 
 highlights unmatched paren.
 
+# limitation
+Currently implementations has no supports to detect too many open/close parentheses.
+It is very difficult... please any suggetion.
+
 # options
 
-### g:unmatchparen#stopline (default: 50)
-Settings for range to check line count.
+### g:unmatchparen#is_syntax_detection_enabled (default: 1)
+Settings for toggle syntax detection.
+
+### g:unmatchparen#ignore_syntaxes (default: ['Comment', 'String'])
+Settings for detect syntaxes.
 
 ### g:unmatchparen#highlight_priority (default: 10)
 Settings for highlight priority. `help matchaddpos`
 
-### g:unmatchparen#skip_open_paren_if_unmatch (default: 1)
-Settings for pop out open paren if unmatched.
-
 ### g:unmatchparen#disable_filetypes (default: [])
 Settings for disable specific filetypes.
-
-### g:unmatchparen#is_open_paren_check (default: 1)
-Settings for check open paren.
 
 ### g:unmatchparen#pairs_for_filetype (default: { 'vim': { ... } })
 Settings for pairs for specific filetype.
@@ -35,7 +36,8 @@ let g:unmatchparen#pairs_for_filetype = {
 
 # demo
 
-![demo](https://user-images.githubusercontent.com/629908/52343727-41c07300-2a5c-11e9-811a-20e09af04a42.png)
+![demo1](https://user-images.githubusercontent.com/629908/52392193-15503980-2ae4-11e9-88b6-7c28a8b9c2cc.png)
+![demo2](https://user-images.githubusercontent.com/629908/52392099-d28e6180-2ae3-11e9-9314-7cb352b8ac5c.png)
 
 
 # note
