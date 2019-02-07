@@ -2,6 +2,7 @@ let g:unmatchparen#is_syntax_detection_enabled = get(g:, 'unmatchparen#is_syntax
 let g:unmatchparen#ignore_syntaxes = get(g:, 'unmatchparen#ignore_syntaxes', ['Comment', 'String'])
 let g:unmatchparen#highlight_priority = get(g:, 'unmatchparen#highlight_priority', 100)
 let g:unmatchparen#disable_filetypes = get(g:, 'unmatchparen#disable_filetypes', [])
+let g:unmatchparen#disable_pairs = get(g:, 'unmatchparen#disable_pairs', { '<': '>' })
 let g:unmatchparen#pairs_for_filetype = get(g:, 'g:unmatchparen#pairs_for_filetype', {
       \   'vim': {
       \     'if': 'endif',
@@ -129,12 +130,18 @@ function! unmatchparen#setup()
   let s:pattern = ''
 
   for [open, closed] in map(split(&l:matchpairs, ','), 'split(v:val, ":")')
+    if exists('g:unmatchparen#disable_pairs["' . open . '"]') || index(values(g:unmatchparen#disable_pairs), closed) > 0
+      continue
+    endif
     let s:pairs[closed] = open
   endfor
 
 
   if exists('g:unmatchparen#pairs_for_filetype["' . &filetype . '"]')
     for [open, closed] in items(g:unmatchparen#pairs_for_filetype[&filetype])
+      if exists('g:unmatchparen#disable_pairs["' . open . '"]') || index(values(g:unmatchparen#disable_pairs), closed) > 0
+        continue
+      endif
       let s:pairs[closed] = open
     endfor
   endif

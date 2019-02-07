@@ -14,6 +14,9 @@ Settings for toggle syntax detection.
 ### g:unmatchparen#ignore_syntaxes (default: ['Comment', 'String'])
 Settings for detect syntaxes.
 
+### g:unmatchparen#disable_pairs (default: { '<': '>' })
+Settings for disable pairs.
+
 ### g:unmatchparen#highlight_priority (default: 100)
 Settings for highlight priority. `help matchaddpos`
 
