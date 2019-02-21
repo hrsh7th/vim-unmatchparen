@@ -3,6 +3,7 @@ let g:unmatchparen#ignore_syntaxes = get(g:, 'unmatchparen#ignore_syntaxes', ['C
 let g:unmatchparen#highlight_priority = get(g:, 'unmatchparen#highlight_priority', 100)
 let g:unmatchparen#disable_filetypes = get(g:, 'unmatchparen#disable_filetypes', [])
 let g:unmatchparen#disable_pairs = get(g:, 'unmatchparen#disable_pairs', { '<': '>' })
+let g:unmatchparen#throttle = get(g:, 'unmatchparen#throttle', 500)
 let g:unmatchparen#pairs_for_filetype = get(g:, 'g:unmatchparen#pairs_for_filetype', {
       \   'vim': {
       \     'if': 'endif',
@@ -12,11 +13,16 @@ let g:unmatchparen#pairs_for_filetype = get(g:, 'g:unmatchparen#pairs_for_filety
       \   }
       \ })
 
+let s:current_ft = ''
 let s:pairs = {}
 let s:opens = []
 let s:closes = []
 let s:pattern = ''
+let s:timer_running = v:false
 
+"
+" highlight
+"
 function! unmatchparen#highlight(unmatches)
   if has_key(b:, 'unmatchparen_current_highlights')
     silent! call matchdelete(b:unmatchparen_current_highlights)
@@ -28,10 +34,35 @@ function! unmatchparen#highlight(unmatches)
 
 endfunction
 
+"
+" update_async
+"
+function! unmatchparen#update_async()
+  if s:timer_running
+    return
+  endif
+  let s:timer_running = v:true
+
+  function! s:tick(timer)
+    call unmatchparen#update()
+    let s:timer_running = v:false
+  endfunction
+  call timer_start(g:unmatchparen#throttle, funcref('s:tick'), { 'repeat': 1 })
+endfunction
+
+"
+" update
+"
 function! unmatchparen#update()
+  let s:timer_running = v:false
+
   " ignore if matched disable filetypes.
   if index(g:unmatchparen#disable_filetypes, &filetype) > 0
     return
+  endif
+
+  if s:current_ft != &filetype
+    call unmatchparen#setup()
   endif
 
   " create target texts.
@@ -123,7 +154,11 @@ function! unmatchparen#update()
   call unmatchparen#highlight(s:unmatches)
 endfunction
 
+"
+" setup
+"
 function! unmatchparen#setup()
+  let s:current_ft = &filetype
   let s:pairs = {}
   let s:opens = []
   let s:closes = []

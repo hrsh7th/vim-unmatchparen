@@ -8,6 +8,9 @@ It is very difficult... please any suggetion.
 
 # options
 
+### g:unmatchparen#throttle (default: 500)
+Settings for throttle timeout.
+
 ### g:unmatchparen#is_syntax_detection_enabled (default: 1)
 Settings for toggle syntax detection.
 
