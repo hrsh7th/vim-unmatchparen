@@ -31,7 +31,6 @@ function! unmatchparen#highlight(unmatches)
         \ 'ParenUnMatch',
         \ map(a:unmatches, "[v:val['line'], v:val['col'], v:val['len']]"),
         \ g:unmatchparen#highlight_priority)
-
 endfunction
 
 "
@@ -66,9 +65,11 @@ function! unmatchparen#update()
   endif
 
   " create target texts.
-  let s:start = line('w0')
-  let s:end = line('w$')
-  let s:lines = getbufline(bufnr('%'), s:start, s:end)
+  let s:line = line('.')
+  let s:lines = getbufline('%', '^', '$')
+  let s:start = max([1, s:line - winheight(0)])
+  let s:end = min([len(s:lines), s:line + winheight(0)])
+  let s:lines = s:lines[s:start - 1 : s:end - 1]
   let s:texts = type(s:lines) == v:t_list ? join(s:lines, "\n") : s:lines
 
   " search.
